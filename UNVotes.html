@@ -179,21 +179,21 @@ countries[1:10,]</code></pre>
 ## 8    970 0.5213675                                                Nauru
 ## 9    200 0.5222841 United Kingdom of Great Britain and Northern Ireland
 ## 10   220 0.5255878                                               France</code></pre>
-<pre class="r"><code>countries[-(1:10),]</code></pre>
-<pre><code>## # A tibble: 183 × 3
-##    ccode  avgscore               cname
-##    &lt;int&gt;     &lt;dbl&gt;               &lt;chr&gt;
-## 1    732 0.5849858   Republic of Korea
-## 2    367 0.6016713              Latvia
-## 3    316 0.6052632      Czech Republic
-## 4    360 0.6061026             Romania
-## 5    368 0.6071923           Lithuania
-## 6    290 0.6088766              Poland
-## 7    372 0.6095791             Georgia
-## 8    359 0.6097222 Republic of Moldova
-## 9    310 0.6108787             Hungary
-## 10   366 0.6121884             Estonia
-## # ... with 173 more rows</code></pre>
+<pre class="r"><code>countries[length(countries$ccode):(length(countries$ccode)-10),]</code></pre>
+<pre><code>## # A tibble: 11 × 3
+##    ccode  avgscore                 cname
+##    &lt;int&gt;     &lt;dbl&gt;                 &lt;chr&gt;
+## 1    591 0.9919679            Seychelles
+## 2     80 0.9780381                Belize
+## 3    781 0.9716312              Maldives
+## 4    404 0.9707904         Guinea Bissau
+## 5    403 0.9677419 Sao Tome and Principe
+## 6    811 0.9674556              Cambodia
+## 7    402 0.9665145            Cabo Verde
+## 8    700 0.9637155           Afghanistan
+## 9    860 0.9624796           Timor-Leste
+## 10   481 0.9571984                 Gabon
+## 11    56 0.9547445           Saint Lucia</code></pre>
 <p>So here is a simple one dimensional clustering. The first set are the countries that voted NO most often. The second set voted YES most often.</p>
 <p>Now add a column for each vote:</p>
 <pre class="r"><code># Process each vote

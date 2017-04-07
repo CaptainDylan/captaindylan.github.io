@@ -69,7 +69,7 @@ countries <- countries %>% arrange(avgscore)
 
 countries[1:10,]
 
-countries[-(1:10),]
+countries[length(countries$ccode):(length(countries$ccode)-10),]
 
 ```
 
