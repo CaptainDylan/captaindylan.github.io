@@ -1,0 +1,143 @@
+---
+title: "UN Voting Cluster Analysis"
+author: "Dylan Peters"
+date: "April 6, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## UN Voting Cluster Analysis
+
+## The data set contains the votes of the UN General Assembly, each vote for each member nation.  I discovered it when reading a blog post and I thought I could do some cluster analysis on it.
+
+```{r}
+library(dplyr)
+
+load("Data\\UNVotesPublished.RData")
+
+# Do a filter to only get the last 10 years (session) and ignore votes that are irrelevant
+voteslast10 <- x %>% filter(session > 60 & vote <=3)
+
+```
+
+The vote column has several options, but we only care if they voted yes (1) or not:
+
+```{r}
+voteslast10$vote <- as.integer(voteslast10$vote == 1)
+```
+
+Let's get a look at the votes and calculate the average percent for each vote. Then filter out votes that were unamimous because they are less interesting. 
+
+```{r}
+votes10avg <- voteslast10 %>% group_by(rcid) %>% summarize(perc = mean(vote))
+votes10avg <- votes10avg %>% filter(perc < 1 & perc > 0) %>% arrange(desc(perc))
+
+```
+
+# Let's examine a histogram of the vote percentages:
+
+```{r}
+
+hist(votes10avg$perc)
+```
+
+The vote percentages are concentrated around 1.  There are a few close votes and very few votes with low percentages. This makes sense, because an unpopular proposal would be unlikely to come up for a vote.
+
+Take each country's vote and subtract the overall average to get the score.  The score is a measure of how different the country is from the consensus.  If a country votes no on a popular proposal that passed with 90% approval, then then will have a score of -0.9 (0 - 0.9), whereas a country that voted yes on that proposal would have a score of 0.1 (1 - 0.9), indicating that it is closer to the consensus.
+
+```{r}
+
+scores <- voteslast10 %>% inner_join(votes10avg, by = c("rcid", "rcid"))
+scores$score <- scores$vote - scores$perc
+
+```
+The countrycode package will let us convert the country codes to country names. We will need a data set with one row per country, and one column per vote score.
+
+```{r}
+
+# install.packages("countrycode")
+library(countrycode)
+
+countries <- voteslast10 %>% group_by(ccode) %>% summarize(avgscore = mean(vote))
+countries$cname <- countrycode(countries$ccode, "cown","country.name")
+countries <- countries %>% arrange(avgscore)
+
+#voteslast10$cname <- countrycode(voteslast10$ccode, "cown","country.name")
+
+countries[1:10,]
+
+countries[-(1:10),]
+
+```
+
+So here is a simple one dimensional clustering. The first set are the countries that voted NO most often.  The second set voted YES most often.
+
+Now add a column for each vote:
+
+```{r}
+# Process each vote
+
+for (rcid1 in votes10avg$rcid)
+{
+  colname <- paste("V" , toString(rcid1), sep="")
+
+  # Get votes scores for this vote
+  # do join
+  countries[colname] <- (countries %>% left_join(filter(scores, rcid == rcid1), by=c("ccode","ccode")))$score
+}
+
+countries[is.na(countries)] <- 0
+
+```
+
+Now that we have a good dataset, use the dist() function to create a matrix of distances between each row.  Then run cmdscale() to scale those distances to 2 dimensions.
+
+```{r cache=TRUE}
+# Calculate distance matrix
+countriesDist <- dist(countries[,c(-1, -2, -3)])
+
+countriesmodel <- cmdscale(countriesDist, k=2)
+
+countriescoord <- as.data.frame(countriesmodel)
+countriescoord <- cbind(countriescoord, countries$cname)
+
+### plot the points (with labels)
+colnames(countriescoord) <- c("attribute1", "attribute2", "country")
+
+require(ggplot2)
+
+ggplot()+geom_point(data=countriescoord, aes(x=attribute1, y=attribute2), color="gray")+
+  geom_text(data=countriescoord, aes(x=attribute1, y=attribute2, label=country, size=1))
+
+
+```
+
+# Analyzing the plot
+We can see definite clusters in the plot, though the biggest ones are crowded.  Like the one dimensional version, the U.S. is far from the others, along with Israel.  This indicates that the two countries vote the same on most votes.
+
+A plot with the more interesting items is easier to read.
+
+```{r echo=FALSE}
+
+countrylist <- c("United States of America" ,"Israel", 
+"Canada", 
+"Australia", "Nauru", "United Kingdom of Great Britain and Northern Ireland",
+"Republic of Korea", 
+"Tonga", "Italy", "Cameroon",   
+"Russian Federation",  
+"Turkey", "India",
+"China", "Cuba", "Egypt", "Seychelles" )
+
+countrysubset <- countriescoord[countriescoord$country %in% countrylist,]
+
+require(ggplot2)
+
+ggplot()+geom_point(data=countrysubset, aes(x=attribute1, y=attribute2), color="gray")+
+  geom_text(data=countrysubset, aes(x=attribute1, y=attribute2, label=country, size=1))
+
+```
+
+While the countries on the left vote together on many items, the top left and top right have their own differences.  Canada and Australia try to split the difference between the top left and the top right.  Then there are few countries that vote independently such as Naru and Cameroon.
